@@ -387,10 +387,18 @@
 </div>
 </article>
 
-<article class="card phase-card">
-<div class="card-header"><div><p class="eyebrow">TRADING GOAL</p><h3>Required pace from active trading accounts</h3></div></div>
+<article class="card phase-card trading-goal-card">
+<div class="card-header"><div><p class="eyebrow">TRADING GOAL</p><h3>Growth from current active account balances</h3></div></div>
 <div class="crypto-settings compact-settings"><label>Goal amount<input id="million-goal-amount" min="1" step="1000" type="number"/></label><label>Target date<input id="million-target-date" type="date"/></label><button class="button" id="save-million-goal">Save goal</button></div>
-<div class="kpi-grid"><article class="card kpi"><span>Active capital</span><strong id="million-active-capital">$0</strong></article><article class="card kpi"><span>Daily dollar goal</span><strong id="million-daily-dollar">$0</strong></article><article class="card kpi"><span>Daily growth required</span><strong id="million-daily-percent">0%</strong></article></div>
+<div class="goal-health-grid">
+  <article class="goal-metric"><span>Current active balance</span><strong id="million-active-capital">$0</strong><small>Actual balances, not account sizes</small></article>
+  <article class="goal-metric"><span>Withdrawable profit</span><strong id="million-withdrawable">$0</strong><small>Only amounts above starting balances</small></article>
+  <article class="goal-metric"><span>Recovery needed</span><strong id="million-recovery">$0</strong><small>Amount needed to return negative accounts to breakeven</small></article>
+  <article class="goal-metric"><span>Remaining to goal</span><strong id="million-remaining">$0</strong><small>Goal minus current active balance</small></article>
+  <article class="goal-metric"><span>Daily dollar pace</span><strong id="million-daily-dollar">$0</strong><small>Compound pace through target date</small></article>
+  <article class="goal-metric"><span>Daily growth required</span><strong id="million-daily-percent">0%</strong><small>Calculated from today's current balances</small></article>
+</div>
+<div class="goal-progress-label"><span id="million-progress-start">$0 current</span><span id="million-progress-goal">$0 goal</span></div>
 <div class="progress-track"><div class="progress-fill" id="million-progress"></div></div><p class="muted" id="million-message"></p>
 </article>
 <article class="card phase-card"><div class="card-header"><div><p class="eyebrow">TRADE JOURNAL</p><h3>Trade-by-trade history</h3></div><div class="inline-actions"><button class="button secondary" id="export-trades">Export CSV</button><button class="button" id="add-trade">Add trade</button></div></div><div class="account-detail-summary" id="trade-stats"></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Account</th><th>Symbol</th><th>Side</th><th>Net P/L</th><th>R</th><th>Setup</th><th></th></tr></thead><tbody id="trade-log-body"></tbody></table></div></article>
@@ -423,7 +431,7 @@
         <select name="necessary"><option>Yes</option><option>No</option><option>Review</option></select>
 </label>
 <div class="dialog-actions">
-<button class="button secondary" value="cancel">Cancel</button>
+<button class="button secondary" type="button" data-dialog-cancel>Cancel</button>
 <button class="button" value="default">Save</button>
 </div>
 </form>
@@ -434,7 +442,7 @@
 <label>Date<input name="date" required="" type="date"/></label>
 <label>Actual balance<input min="0" name="balance" required="" step="0.01" type="number"/></label>
 <div class="dialog-actions">
-<button class="button secondary" value="cancel">Cancel</button>
+<button class="button secondary" type="button" data-dialog-cancel>Cancel</button>
 <button class="button" value="default">Save</button>
 </div>
 </form>
@@ -455,7 +463,7 @@
 <label>Amount<input min="0" name="amount" required="" step="0.01" type="number"/></label>
 <label>Note<input name="note" placeholder="Trade result, payout, reset, etc."/></label>
 <div class="dialog-actions">
-<button class="button secondary" value="cancel">Cancel</button>
+<button class="button secondary" type="button" data-dialog-cancel>Cancel</button>
 <button class="button" value="default">Save transaction</button>
 </div>
 </form>
@@ -487,34 +495,36 @@
 </dialog>
 <dialog id="crypto-account-dialog">
 <form id="crypto-account-form" method="dialog">
-<h3>Add crypto account</h3>
+<div class="dialog-title-row"><h3>Add crypto account</h3><button aria-label="Close" class="dialog-close" type="button" data-close-dialog="crypto-account-dialog">×</button></div>
 <label>Account name<input name="name" placeholder="Example: BloFin" required=""/></label>
 <label>Starting balance<input min="0" name="startingBalance" required="" step="0.01" type="number"/></label>
 <label>Current balance<input min="0" name="currentBalance" required="" step="0.01" type="number"/></label>
 <label>Daily growth goal (%)<input min="0" name="dailyGoal" step="0.01" type="number" value="0.5"/></label>
 <div class="dialog-actions">
-<button class="button secondary" value="cancel">Cancel</button>
+<button class="button secondary" type="button" data-dialog-cancel>Cancel</button>
 <button class="button" value="default">Save account</button>
 </div>
 </form>
 </dialog>
 <dialog id="prop-account-dialog">
 <form id="prop-account-form" method="dialog">
-<h3>Add prop firm account</h3>
-<label>Account name<input name="name" placeholder="Example: AquaFunded 200K" required=""/></label>
-<label>Account size<input min="0" name="accountSize" required="" step="0.01" type="number"/></label>
-<label>Program type
-        <select name="programType">
-<option value="instant">Instant funded</option>
-<option value="step">Step challenge</option>
-</select>
+<div class="dialog-title-row"><h3>Add prop firm account</h3><button aria-label="Close" class="dialog-close" type="button" data-close-dialog="prop-account-dialog">×</button></div>
+<label>Account name<input name="name" placeholder="Example: AquaFunded 50K" required=""/></label>
+<label>Account type
+  <select name="programType" id="prop-program-type">
+    <option value="instant">Instant funded</option>
+    <option value="one-step">1-step challenge</option>
+    <option value="two-step">2-step challenge</option>
+  </select>
 </label>
-<label>Daily loss maximum (%)<input min="0" name="dailyLossMax" required="" step="0.01" type="number"/></label>
-<label>Maximum drawdown (%)<input min="0" name="maxDrawdown" required="" step="0.01" type="number"/></label>
-<label>Profit required to activate (%)<input min="0" name="profitTarget" required="" step="0.01" type="number"/></label>
-<label>Current profit (%)<input name="currentProfit" step="0.01" type="number" value="0"/></label>
+<label>Starting account balance<input min="0" name="accountSize" required="" step="0.01" type="number"/></label>
+<label>Current account balance<input min="0" name="currentBalance" required="" step="0.01" type="number"/></label>
+<label>Today's starting balance<input min="0" name="todayStartingBalance" step="0.01" type="number"/></label>
+<label>Daily drawdown (%)<input min="0" name="dailyLossMax" required="" step="0.01" type="number" value="3"/></label>
+<label>Maximum drawdown (%)<input min="0" name="maxDrawdown" required="" step="0.01" type="number" value="6"/></label>
+<label id="prop-profit-target-label">Challenge profit target (%)<input min="0" name="profitTarget" step="0.01" type="number" value="0"/></label>
 <div class="dialog-actions">
-<button class="button secondary" value="cancel">Cancel</button>
+<button class="button secondary" type="button" data-close-dialog="prop-account-dialog">Cancel</button>
 <button class="button" value="default">Save account</button>
 </div>
 </form>
@@ -526,7 +536,7 @@
 <label>Account name<input name="name" placeholder="Chase Checking" required/></label>
 <label>Account type<select name="type"><option value="checking">Checking</option><option value="savings">Savings</option></select></label>
 <label>Current balance<input min="0" name="balance" required step="0.01" type="number"/></label>
-<div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save account</button></div>
+<div class="dialog-actions"><button class="button secondary" type="button" data-dialog-cancel>Cancel</button><button class="button" value="default">Save account</button></div>
 </form>
 </dialog>
 <dialog id="finance-item-dialog">
@@ -542,7 +552,7 @@
 <label>Manual variance adjustment<input name="varianceAdjustment" step="0.01" type="number" value="0"/></label>
 <small class="muted">Use the adjustment only when you need to override or explain the calculated variance.</small>
 <div class="dialog-actions">
-<button class="button secondary" value="cancel">Cancel</button>
+<button class="button secondary" type="button" data-dialog-cancel>Cancel</button>
 <button class="button" value="default">Save line item</button>
 </div>
 </form>
@@ -569,7 +579,7 @@
 <label>Fat (g)<input min="0" name="fat" step="0.1" type="number"/></label>
 </div>
 <div class="dialog-actions">
-<button class="button secondary" value="cancel">Cancel</button>
+<button class="button secondary" type="button" data-dialog-cancel>Cancel</button>
 <button class="button" value="default">Save food</button>
 </div>
 </form>
@@ -580,18 +590,18 @@
 <label>Date<input name="date" required="" type="date"/></label>
 <label>Weight (lb)<input min="0" name="weight" required="" step="0.1" type="number"/></label>
 <div class="dialog-actions">
-<button class="button secondary" value="cancel">Cancel</button>
+<button class="button secondary" type="button" data-dialog-cancel>Cancel</button>
 <button class="button" value="default">Save</button>
 </div>
 </form>
 </dialog>
-<script src="app.js"></script>
 
-<dialog id="recipe-dialog"><form id="recipe-form" method="dialog"><h3>Add recipe</h3><label>Name<input name="name" required=""/></label><label>Serving<input name="serving" placeholder="1 bowl"/></label><label>Protein (g)<input min="0" name="protein" step="0.1" type="number"/></label><label>Fat (g)<input min="0" name="fat" step="0.1" type="number"/></label><label>Carbs (g)<input min="0" name="carbs" step="0.1" type="number"/></label><label>Sugar (g)<input min="0" name="sugar" step="0.1" type="number"/></label><label>Ingredients<textarea name="ingredients"></textarea></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
-<dialog id="trade-dialog"><form id="trade-form" method="dialog"><h3>Add trade</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="trade-account-select" name="accountId" required=""></select></label><label>Symbol<input name="symbol" required=""/></label><label>Side<select name="side"><option>Long</option><option>Short</option></select></label><label>Entry<input name="entry" step="any" type="number"/></label><label>Exit<input name="exit" step="any" type="number"/></label><label>Risk amount<input min="0" name="risk" step="0.01" type="number"/></label><label>Net P/L<input name="netPnl" required="" step="0.01" type="number"/></label><label>Setup<input name="setup"/></label><label>Grade<select name="grade"><option>A+</option><option>A</option><option>B</option><option>C</option></select></label><label>Notes<textarea name="notes"></textarea></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
-<dialog id="withdrawal-dialog"><form id="withdrawal-form" method="dialog"><h3>Add withdrawal</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="withdrawal-account-select" name="accountId" required=""></select></label><label>Gross amount<input min="0" name="gross" required="" step="0.01" type="number"/></label><label>Fees<input min="0" name="fees" step="0.01" type="number" value="0"/></label><label>Destination<select name="destination"><option>Savings</option><option>Cash on Hand</option><option>Checking</option><option>Reinvested</option><option>Taxes</option><option>Account Purchase</option><option>Other</option></select></label><label>Note<input name="note"/></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
+<dialog id="recipe-dialog"><form id="recipe-form" method="dialog"><h3>Add recipe</h3><label>Name<input name="name" required=""/></label><label>Serving<input name="serving" placeholder="1 bowl"/></label><label>Protein (g)<input min="0" name="protein" step="0.1" type="number"/></label><label>Fat (g)<input min="0" name="fat" step="0.1" type="number"/></label><label>Carbs (g)<input min="0" name="carbs" step="0.1" type="number"/></label><label>Sugar (g)<input min="0" name="sugar" step="0.1" type="number"/></label><label>Ingredients<textarea name="ingredients"></textarea></label><div class="dialog-actions"><button class="button secondary" type="button" data-dialog-cancel>Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
+<dialog id="trade-dialog"><form id="trade-form" method="dialog"><h3>Add trade</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="trade-account-select" name="accountId" required=""></select></label><label>Symbol<input name="symbol" required=""/></label><label>Side<select name="side"><option>Long</option><option>Short</option></select></label><label>Entry<input name="entry" step="any" type="number"/></label><label>Exit<input name="exit" step="any" type="number"/></label><label>Risk amount<input min="0" name="risk" step="0.01" type="number"/></label><label>Net P/L<input name="netPnl" required="" step="0.01" type="number"/></label><label>Setup<input name="setup"/></label><label>Grade<select name="grade"><option>A+</option><option>A</option><option>B</option><option>C</option></select></label><label>Notes<textarea name="notes"></textarea></label><div class="dialog-actions"><button class="button secondary" type="button" data-dialog-cancel>Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
+<dialog id="withdrawal-dialog"><form id="withdrawal-form" method="dialog"><h3>Add withdrawal</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="withdrawal-account-select" name="accountId" required=""></select></label><label>Gross amount<input min="0" name="gross" required="" step="0.01" type="number"/></label><label>Fees<input min="0" name="fees" step="0.01" type="number" value="0"/></label><label>Destination<select name="destination"><option>Savings</option><option>Cash on Hand</option><option>Checking</option><option>Reinvested</option><option>Taxes</option><option>Account Purchase</option><option>Other</option></select></label><label>Note<input name="note"/></label><div class="dialog-actions"><button class="button secondary" type="button" data-dialog-cancel>Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
 
-<dialog id="investment-account-dialog"><form id="investment-account-form" method="dialog"><h3>Add investment account</h3><label>Account name<input name="name" placeholder="Fidelity" required=""/></label><label>Platform<select name="platform"><option>Fidelity</option><option>Robinhood</option><option>Webull</option><option>Coinbase</option><option>Kraken</option><option>Crypto Wallet</option><option>Other</option></select></label><label>Account type<select name="accountType"><option>Brokerage</option><option>Retirement</option><option>Crypto</option><option>Wallet</option></select></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save account</button></div></form></dialog>
-<dialog id="investment-transaction-dialog"><form id="investment-transaction-form" method="dialog"><h3>Add investment transaction</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="investment-account-select" name="accountId" required=""></select></label><label>Transaction<select name="type"><option value="buy">Buy / DCA</option><option value="sell">Sell</option><option value="dividend">Dividend</option></select></label><label>Asset type<select name="assetType"><option value="stock">Stock</option><option value="fund">ETF / Fund</option><option value="crypto">Crypto</option></select></label><label>Ticker / token symbol<input name="symbol" placeholder="AAPL or BTC" required=""/></label><label>Asset name<input name="name" placeholder="Apple or Bitcoin"/></label><label>CoinGecko ID (crypto only)<input name="priceId" placeholder="bitcoin"/></label><label>Quantity<input min="0" name="quantity" step="any" type="number"/></label><label>Price per share/token<input min="0" name="price" step="any" type="number"/></label><label>Fees<input min="0" name="fees" step="0.01" type="number" value="0"/></label><label>Note<input name="note"/></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save transaction</button></div></form></dialog>
+<dialog id="investment-account-dialog"><form id="investment-account-form" method="dialog"><h3>Add investment account</h3><label>Account name<input name="name" placeholder="Fidelity" required=""/></label><label>Platform<select name="platform"><option>Fidelity</option><option>Robinhood</option><option>Webull</option><option>Coinbase</option><option>Kraken</option><option>Crypto Wallet</option><option>Other</option></select></label><label>Account type<select name="accountType"><option>Brokerage</option><option>Retirement</option><option>Crypto</option><option>Wallet</option></select></label><div class="dialog-actions"><button class="button secondary" type="button" data-dialog-cancel>Cancel</button><button class="button" value="default">Save account</button></div></form></dialog>
+<dialog id="investment-transaction-dialog"><form id="investment-transaction-form" method="dialog"><h3>Add investment transaction</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="investment-account-select" name="accountId" required=""></select></label><label>Transaction<select name="type"><option value="buy">Buy / DCA</option><option value="sell">Sell</option><option value="dividend">Dividend</option></select></label><label>Asset type<select name="assetType"><option value="stock">Stock</option><option value="fund">ETF / Fund</option><option value="crypto">Crypto</option></select></label><label>Ticker / token symbol<input name="symbol" placeholder="AAPL or BTC" required=""/></label><label>Asset name<input name="name" placeholder="Apple or Bitcoin"/></label><label>CoinGecko ID (crypto only)<input name="priceId" placeholder="bitcoin"/></label><label>Quantity<input min="0" name="quantity" step="any" type="number"/></label><label>Price per share/token<input min="0" name="price" step="any" type="number"/></label><label>Fees<input min="0" name="fees" step="0.01" type="number" value="0"/></label><label>Note<input name="note"/></label><div class="dialog-actions"><button class="button secondary" type="button" data-dialog-cancel>Cancel</button><button class="button" value="default">Save transaction</button></div></form></dialog>
+<script src="app.js?v=12"></script>
 </body>
 </html>

@@ -108,7 +108,12 @@ function loadState() {
     saved.tradingAccounts.forEach(account => {
       account.transactions = account.transactions || [];
       if (account.kind === "crypto" && account.baseBalance === undefined) account.baseBalance = Number(account.startingBalance || 0);
-      if (account.kind === "prop" && account.baseBalance === undefined) account.baseBalance = Number(account.accountSize || 0);
+      if (account.kind === "prop") {
+        if (account.currentBalance === undefined) account.currentBalance = Number(account.accountSize || 0);
+        if (account.baseBalance === undefined) account.baseBalance = Number(account.currentBalance || account.accountSize || 0);
+        if (account.todayStartingBalance === undefined) account.todayStartingBalance = Number(account.currentBalance || account.accountSize || 0);
+        if (account.programType === "step") account.programType = "one-step";
+      }
     });
     [...saved.budget.revenue, ...saved.budget.sections.flatMap(s => s.items)].forEach(item => {
       if (item.varianceAdjustment === undefined) item.varianceAdjustment = 0;
@@ -661,11 +666,25 @@ function accountTransactionTotals(account) {
 }
 function syncAccountFromTransactions(account) {
   const totals = accountTransactionTotals(account);
-  if (account.kind === "crypto") {
-    account.currentBalance = totals.calculatedBalance;
-  } else {
-    account.currentProfit = account.accountSize ? totals.netPL / Number(account.accountSize) * 100 : 0;
+  account.currentBalance = totals.calculatedBalance;
+  if (account.kind === "prop") {
+    const starting = Number(account.accountSize || 0);
+    account.currentProfit = starting ? (Number(account.currentBalance) - starting) / starting * 100 : 0;
   }
+}
+function propAccountHealth(account) {
+  syncAccountFromTransactions(account);
+  const starting = Number(account.accountSize || 0);
+  const current = Number(account.currentBalance || 0);
+  const todayStart = Number(account.todayStartingBalance || current);
+  const dailyFloor = todayStart * (1 - Number(account.dailyLossMax || 0) / 100);
+  const maxFloor = starting * (1 - Number(account.maxDrawdown || 0) / 100);
+  const dailyLeft = Math.max(0, current - dailyFloor);
+  const maxLeft = Math.max(0, current - maxFloor);
+  const withdrawable = Math.max(0, current - starting);
+  const recovery = Math.max(0, starting - current);
+  const status = current < starting ? "Recovery" : current === starting ? "Breakeven" : "Profitable";
+  return {starting,current,todayStart,dailyFloor,maxFloor,dailyLeft,maxLeft,withdrawable,recovery,status};
 }
 function openAccountTransaction(accountId) {
   const account = state.tradingAccounts.find(x=>x.id===accountId);
@@ -691,8 +710,9 @@ function renderAccountDetail(account) {
   document.querySelector("#account-detail-type").textContent = account.kind === "crypto" ? "CRYPTO ACCOUNT" : `PROP FIRM · ${account.programType === "instant" ? "INSTANT" : "STEP CHALLENGE"}`;
   document.querySelector("#account-detail-name").textContent = account.name;
 
-  const currentBalance = account.kind === "crypto" ? account.currentBalance : Number(account.accountSize) + totals.netPL;
-  const status = account.kind === "crypto" ? "Active" : account.status === "active" ? "Active" : Number(account.currentProfit) >= Number(account.profitTarget) ? "Ready to activate" : "Challenge";
+  const currentBalance = Number(account.currentBalance || 0);
+  const health = account.kind === "prop" ? propAccountHealth(account) : null;
+  const status = account.kind === "crypto" ? "Active" : health.status;
 
   document.querySelector("#account-detail-summary").innerHTML = `
     <div><span>Current balance</span><strong>${money(currentBalance)}</strong></div>
@@ -702,7 +722,8 @@ function renderAccountDetail(account) {
     <div><span>Deposits</span><strong>${money(totals.deposits)}</strong></div>
     <div><span>Withdrawals</span><strong>${money(totals.withdrawals)}</strong></div>
     <div><span>Status</span><strong>${status}</strong></div>
-    <div><span>${account.kind==="crypto"?"Growth":"Profit %"}</span><strong>${account.kind==="crypto" ? percent(account.baseBalance ? (currentBalance-account.baseBalance)/account.baseBalance*100 : 0) : percent(account.currentProfit)}</strong></div>`;
+    <div><span>${account.kind==="crypto"?"Growth":"Account return"}</span><strong>${account.kind==="crypto" ? percent(account.baseBalance ? (currentBalance-account.baseBalance)/account.baseBalance*100 : 0) : percent(account.currentProfit)}</strong></div>
+    ${health ? `<div><span>Withdrawable profit</span><strong class="${health.withdrawable>0?'var-good':''}">${money(health.withdrawable)}</strong></div><div><span>Recovery needed</span><strong class="${health.recovery>0?'var-bad':''}">${money(health.recovery)}</strong></div>` : ''}`;
 
   const body = document.querySelector("#account-transaction-body");
   const txs = accountTransactions(account);
@@ -763,28 +784,26 @@ function renderTradingAccounts() {
         </div>
       </article>`);
     } else {
-      const active = account.status === "active";
-      const progress = account.profitTarget > 0 ? Math.max(0,Math.min(100,Number(account.currentProfit)/Number(account.profitTarget)*100)) : 100;
-      const canActivate = Number(account.currentProfit) >= Number(account.profitTarget);
+      const active = account.active !== false;
+      const h = propAccountHealth(account);
+      const statusClass = h.status === "Profitable" ? "good" : h.status === "Breakeven" ? "warn" : "bad";
+      const programLabel = account.programType === "instant" ? "INSTANT FUNDED" : account.programType === "two-step" ? "2-STEP CHALLENGE" : "1-STEP CHALLENGE";
+      const dailyUsed = Number(account.dailyLossMax||0) ? Math.max(0,Math.min(100,(1-h.dailyLeft/(h.todayStart*Number(account.dailyLossMax||0)/100))*100)) : 0;
+      const maxUsed = Number(account.maxDrawdown||0) ? Math.max(0,Math.min(100,(1-h.maxLeft/(h.starting*Number(account.maxDrawdown||0)/100))*100)) : 0;
       root.insertAdjacentHTML("beforeend", `<article class="trading-account-card open-account-card ${active?"active-account":""}" data-id="${account.id}">
-        <div class="account-top"><div><p class="eyebrow">PROP FIRM · ${account.programType==="instant"?"INSTANT":"STEP CHALLENGE"}</p><h4>${account.name}</h4></div><span class="status ${active?"good":canActivate?"warn":"bad"}">${active?"Active":canActivate?"Ready":"Challenge"}</span></div>
-        <div class="account-meta">
-          <div><span>Account size</span><strong>${money(account.accountSize)}</strong></div>
-          <div><span>Profit</span><strong>${percent(account.currentProfit)}</strong></div>
-          <div><span>Daily loss max</span><strong>${percent(account.dailyLossMax)}</strong></div>
-          <div><span>Max drawdown</span><strong>${percent(account.maxDrawdown)}</strong></div>
-          <div><span>Activation target</span><strong>${percent(account.profitTarget)}</strong></div>
-          <div><span>Status</span><strong>${active?"Funded / Active":"Not active"}</strong></div>
+        <div class="account-top"><div><p class="eyebrow">PROP FIRM · ${programLabel}</p><h4>${account.name}</h4></div><span class="status ${statusClass}">${h.status}</span></div>
+        <div class="account-meta prop-health-meta">
+          <div><span>Starting balance</span><strong>${money(h.starting)}</strong></div>
+          <div><span>Current balance</span><strong class="${h.current>=h.starting?'var-good':'var-bad'}">${money(h.current)}</strong></div>
+          <div><span>Today's start</span><strong>${money(h.todayStart)}</strong></div>
+          <div><span>${h.withdrawable>0?'Withdrawable':'Recovery needed'}</span><strong class="${h.withdrawable>0?'var-good':'var-bad'}">${money(h.withdrawable||h.recovery)}</strong></div>
         </div>
-        <div class="account-progress"><div class="bar-track"><div class="bar-fill" style="width:${progress}%"></div></div><small>${percent(account.currentProfit)} of ${percent(account.profitTarget)} required</small></div>
-        <div class="account-pl">
-          <div><span>Profit</span><strong class="var-good">${money(totals.profit)}</strong></div>
-          <div><span>Loss</span><strong class="var-bad">${money(totals.loss)}</strong></div>
-          <div><span>Net P/L</span><strong class="${totals.netPL>=0?"var-good":"var-bad"}">${money(totals.netPL)}</strong></div>
+        <div class="drawdown-stack">
+          <div class="drawdown-row"><div><span>Daily drawdown left</span><strong>${money(h.dailyLeft)}</strong></div><small>Floor ${money(h.dailyFloor)}</small><div class="bar-track"><div class="bar-fill risk-fill" style="width:${dailyUsed}%"></div></div></div>
+          <div class="drawdown-row"><div><span>Max drawdown left</span><strong>${money(h.maxLeft)}</strong></div><small>Floor ${money(h.maxFloor)}</small><div class="bar-track"><div class="bar-fill risk-fill" style="width:${maxUsed}%"></div></div></div>
         </div>
         <div class="account-actions">
           <button class="button small-button add-account-transaction" data-id="${account.id}">Add P/L</button>
-          ${!active ? `<button class="button small-button activate-prop-account" data-id="${account.id}" ${canActivate?"":"disabled"}>Make active</button>` : ""}
           <button class="button secondary small-button remove-trading-account" data-id="${account.id}">Remove</button>
         </div>
       </article>`);
@@ -1017,23 +1036,53 @@ document.querySelector("#crypto-account-form").addEventListener("submit", e => {
   e.target.reset(); cryptoAccountDialog.close(); saveState();
 });
 
-const propAccountDialog = document.querySelector("#prop-account-dialog");
-document.querySelector("#add-prop-account").addEventListener("click", () => {
-  document.querySelector("#prop-account-form").reset();
-  propAccountDialog.showModal();
+// Dialog closing is handled with event delegation so Cancel/X works even when
+// required fields are empty and for dialogs added later in the HTML.
+document.addEventListener("click", event => {
+  const explicitClose = event.target.closest("[data-close-dialog]");
+  if (explicitClose) {
+    event.preventDefault();
+    document.getElementById(explicitClose.dataset.closeDialog)?.close();
+    return;
+  }
+
+  const cancelButton = event.target.closest("[data-dialog-cancel], button[value=\"cancel\"]");
+  if (cancelButton) {
+    event.preventDefault();
+    cancelButton.closest("dialog")?.close();
+    return;
+  }
+
+  const dialog = event.target.closest("dialog");
+  if (dialog && event.target === dialog) dialog.close();
 });
+
+const propAccountDialog = document.querySelector("#prop-account-dialog");
+function updatePropDialogMode(){
+  const form=document.querySelector("#prop-account-form");
+  const instant=form.elements.programType.value==="instant";
+  document.querySelector("#prop-profit-target-label").hidden=instant;
+  if(instant) form.elements.profitTarget.value=0;
+}
+document.querySelector("#add-prop-account").addEventListener("click", () => {
+  const form=document.querySelector("#prop-account-form"); form.reset(); updatePropDialogMode(); propAccountDialog.showModal();
+});
+document.querySelector("#prop-program-type").addEventListener("change",updatePropDialogMode);
 document.querySelector("#prop-account-form").addEventListener("submit", e => {
   if (e.submitter?.value === "cancel") return;
   e.preventDefault();
   const f = new FormData(e.target);
+  const starting=Number(f.get("accountSize")); const current=Number(f.get("currentBalance"));
+  const programType=f.get("programType");
   const account = {
-    id: makeId("prop"), kind:"prop", name:f.get("name"), accountSize:Number(f.get("accountSize")),
-    programType:f.get("programType"), dailyLossMax:Number(f.get("dailyLossMax")),
-    maxDrawdown:Number(f.get("maxDrawdown")), profitTarget:Number(f.get("profitTarget")),
-    currentProfit:Number(f.get("currentProfit")||0), status:"challenge",
-    baseBalance:Number(f.get("accountSize")), transactions: []
+    id: makeId("prop"), kind:"prop", name:f.get("name"), accountSize:starting,
+    programType, dailyLossMax:Number(f.get("dailyLossMax")), maxDrawdown:Number(f.get("maxDrawdown")),
+    profitTarget:programType==="instant"?0:Number(f.get("profitTarget")||0),
+    currentBalance:current, todayStartingBalance:Number(f.get("todayStartingBalance")||current),
+    currentProfit:starting?(current-starting)/starting*100:0,
+    status:programType==="instant"?"active":"challenge", active:programType==="instant",
+    baseBalance:current, transactions: []
   };
-  if (account.programType === "instant" && account.profitTarget <= 0) account.status = "active";
   state.tradingAccounts.push(account);
   e.target.reset(); propAccountDialog.close(); saveState();
 });
@@ -1136,19 +1185,37 @@ function ensurePhase6State(){
   state.withdrawals = state.withdrawals || [];
   state.monthlyArchives = state.monthlyArchives || [];
   state.millionGoal = state.millionGoal || {amount:1000000,targetDate:new Date(Date.now()+365*86400000).toISOString().slice(0,10)};
-  state.tradingAccounts.forEach(a=>{ if(a.active===undefined) a.active=true; });
+  state.tradingAccounts.forEach(a=>{
+    if(a.kind==="prop" && a.currentBalance===undefined) a.currentBalance=Number(a.accountSize||0);
+    if(a.kind==="prop" && a.todayStartingBalance===undefined) a.todayStartingBalance=Number(a.currentBalance||a.accountSize||0);
+    if(a.active===undefined) a.active = a.kind!=="prop" || a.programType==="instant" || a.status==="active";
+  });
 }
 function phase6Download(name,text,type='text/plain'){const b=new Blob([text],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 function activeTradingAccounts(){return state.tradingAccounts.filter(a=>a.active!==false)}
 function accountBalance(a){syncAccountFromTransactions(a);return Number(a.currentBalance ?? a.accountSize ?? 0)}
 function renderMillionGoal(){
-  const active=activeTradingAccounts(); const capital=active.reduce((s,a)=>s+accountBalance(a),0); const goal=Number(state.millionGoal.amount||1000000);
+  const active=activeTradingAccounts();
+  const capital=active.reduce((sum,a)=>sum+accountBalance(a),0);
+  const propHealth=active.filter(a=>a.kind==="prop").map(propAccountHealth);
+  const withdrawable=propHealth.reduce((sum,h)=>sum+h.withdrawable,0);
+  const recovery=propHealth.reduce((sum,h)=>sum+h.recovery,0);
+  const goal=Number(state.millionGoal.amount||1000000);
+  const remaining=Math.max(0,goal-capital);
   const days=Math.max(1,Math.ceil((new Date(state.millionGoal.targetDate+'T12:00:00')-new Date())/86400000));
   const rate=capital>0&&goal>capital?(Math.pow(goal/capital,1/days)-1):0; const daily=capital*rate;
-  document.querySelector('#million-active-capital').textContent=money(capital); document.querySelector('#million-daily-dollar').textContent=money(daily); document.querySelector('#million-daily-percent').textContent=percent(rate*100)+' per calendar day';
+  document.querySelector('#million-active-capital').textContent=money(capital);
+  document.querySelector('#million-withdrawable').textContent=money(withdrawable);
+  document.querySelector('#million-recovery').textContent=money(recovery);
+  document.querySelector('#million-remaining').textContent=money(remaining);
+  document.querySelector('#million-daily-dollar').textContent=money(daily);
+  document.querySelector('#million-daily-percent').textContent=percent(rate*100)+' / day';
   document.querySelector('#million-goal-amount').value=goal; document.querySelector('#million-target-date').value=state.millionGoal.targetDate;
+  document.querySelector('#million-progress-start').textContent=`${money(capital)} current`;
+  document.querySelector('#million-progress-goal').textContent=`${money(goal)} goal`;
   document.querySelector('#million-progress').style.width=Math.min(100,capital/goal*100)+'%';
-  document.querySelector('#million-message').textContent=capital?`${days} days remaining. At today's balance, the required compound pace is ${percent(rate*100)} daily.`:'Activate at least one trading account to calculate the required pace.';
+  const recoveryText=recovery>0?` ${money(recovery)} is needed to bring negative prop accounts back to their starting balances; no profit is counted from those accounts until they are above breakeven.`:'';
+  document.querySelector('#million-message').textContent=capital?`${days} days remain. Required compound pace: ${percent(rate*100)} per calendar day.${recoveryText}`:'Activate at least one trading account to calculate the required pace.';
 }
 function recipeTotalsToday(){return state.health.recipeLog.filter(x=>x.date===localDateKey()).reduce((t,x)=>{['protein','fat','carbs','sugar'].forEach(k=>t[k]+=Number(x[k]||0));return t},{protein:0,fat:0,carbs:0,sugar:0})}
 function renderRecipes(){

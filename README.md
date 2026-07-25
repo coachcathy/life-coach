@@ -45,3 +45,9 @@ In GitHub, open **Settings → Pages**, choose **Deploy from a branch**, then se
 ## Data storage
 
 Data remains in browser LocalStorage. Export a backup before clearing browser data or changing devices.
+
+
+## Phase 12 dialog fix
+- Cancel buttons are now `type="button"` and bypass required-field validation.
+- X, Cancel, outside click, and Escape close dialogs without saving.
+- `app.js?v=12` helps browsers load the updated JavaScript instead of a cached copy.
