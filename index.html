@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Life Coach — living budget, trading, health, and investment tracker." name="description"/>
+<title>Life Coach</title>
+<link href="styles.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="app-shell">
+<aside class="sidebar">
+<div class="brand">
+<div class="brand-mark">S</div>
+<div>
+<h1>Life Coach</h1>
+<p>Command Center</p>
+</div>
+</div>
+<nav aria-label="Primary navigation" class="nav">
+<button class="nav-item active" data-view="dashboard">Overview</button>
+<button class="nav-item" data-view="finance">Finance</button>
+<button class="nav-item" data-view="health">Health</button>
+<button class="nav-item" data-view="crypto">Trading</button>
+<button class="nav-item" data-view="investments">Investments</button></nav>
+<div class="sidebar-note">
+<strong>Operating rule</strong>
+<span>Household finances must work without prop payouts.</span>
+</div>
+</aside>
+<main class="main">
+<header class="topbar">
+<div>
+<p class="eyebrow">PERSONAL OPERATING SYSTEM</p>
+<h2 id="page-title">Overview</h2>
+</div>
+<div class="topbar-actions">
+<span class="date-pill" id="today-label"></span>
+<button class="button secondary" id="import-data">Import data</button>
+<button class="button secondary" id="export-data">Export data</button>
+<input accept="application/json" hidden="" id="import-data-file" type="file"/>
+</div>
+</header>
+<section class="view active" id="dashboard-view">
+<div class="hero">
+<div>
+<p class="eyebrow">MONTHLY POSITION</p>
+<h3>Run your finances like a business.</h3>
+<p>Track planned revenue, actual spending, variance, and your conservative crypto growth path in one place.</p>
+</div>
+<div class="hero-score">
+<span>Operating cash flow</span>
+<strong id="hero-net">$0</strong>
+<small id="hero-net-status">Add actuals to begin</small>
+</div>
+</div>
+<div class="kpi-grid">
+<article class="card kpi">
+<span>Actual revenue</span>
+<strong id="kpi-revenue">$0</strong>
+<small id="kpi-revenue-var">Budget: $0</small>
+</article>
+<article class="card kpi">
+<span>Actual expenses</span>
+<strong id="kpi-expenses">$0</strong>
+<small id="kpi-expense-var">Budget: $0</small>
+</article>
+<article class="card kpi">
+<span>Debt paid</span>
+<strong id="kpi-debt">$0</strong>
+<small>Two payments per card</small>
+</article>
+<article class="card kpi">
+<span>Crypto position</span>
+<strong id="kpi-crypto">$0</strong>
+<small id="kpi-crypto-status">Not entered</small>
+</article>
+</div>
+<div class="two-column">
+<article class="card">
+<div class="card-header">
+<div>
+<p class="eyebrow">BUDGET VS. ACTUAL</p>
+<h3>Monthly category status</h3>
+</div>
+</div>
+<div class="category-bars" id="category-bars"></div>
+</article>
+<article class="card">
+<div class="card-header">
+<div>
+<p class="eyebrow">CRYPTO TRACKER</p>
+<h3>0.5% daily path</h3>
+</div>
+</div>
+<div class="crypto-summary">
+<div><span>Plan date</span><strong id="dash-plan-date">—</strong></div>
+<div><span>Goal balance</span><strong id="dash-goal-balance">$0</strong></div>
+<div><span>Actual balance</span><strong id="dash-actual-balance">$0</strong></div>
+<div><span>Variance</span><strong id="dash-crypto-variance">$0</strong></div>
+</div>
+<div class="progress-track"><div class="progress-fill" id="dash-crypto-progress"></div></div>
+<p class="muted" id="dash-crypto-message">Enter your current balance in Crypto Goal.</p>
+</article>
+</div>
+</section>
+<section class="view" id="finance-view">
+<div class="section-heading">
+<div>
+<p class="eyebrow">LIVING BUDGET</p>
+<h3>Immediate cash and monthly spending</h3>
+</div>
+<div class="inline-actions"><button class="button secondary" id="add-cash-account">Add cash account</button><button class="button secondary" id="add-finance-item">Add line item</button><button class="button" id="add-gap-row">Add gap spending</button></div>
+</div>
+<article class="card cash-balance-card">
+<div class="card-header"><div><p class="eyebrow">IMMEDIATE CASH BALANCE</p><h3>Checking and savings only</h3></div><strong class="cash-total" id="finance-cash-total">$0</strong></div>
+<div class="kpi-grid">
+<article class="card kpi"><span>Checking</span><strong id="finance-checking-total">$0</strong></article>
+<article class="card kpi"><span>Savings</span><strong id="finance-savings-total">$0</strong></article>
+</div>
+<div class="cash-account-grid" id="cash-account-grid"></div>
+<p class="muted">Trading, investments, crypto holdings, and property equity are excluded so this balance stays focused on money available for living expenses.</p>
+</article>
+<div class="statement" id="finance-statement"></div>
+<article class="card gap-card">
+<div class="card-header">
+<div>
+<p class="eyebrow">UNPLANNED / GAP SPENDING</p>
+<h3>Capture expenses that did not fit the plan</h3>
+</div>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Vendor / Description</th>
+<th>Amount</th>
+<th>Category</th>
+<th>Necessary?</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="gap-spending-body"></tbody>
+</table>
+</div>
+</article>
+<article class="card phase-card"><div class="card-header"><div><p class="eyebrow">MONTHLY CLOSE</p><h3>Archive the month before resetting actuals</h3></div><button class="button" id="monthly-close">Close month</button></div><p class="muted">Downloads a JSON month-end report, archives the period, and carries recurring budgets and accounts forward.</p></article></section>
+<section class="view" id="health-view">
+<div class="section-heading">
+<div>
+<p class="eyebrow">HEALTH OPERATING SYSTEM</p>
+<h3>Daily execution, nutrition, and weight progress</h3>
+</div>
+<button class="button secondary" id="reset-health-day">Reset today</button>
+</div>
+<div class="health-hero card">
+<div>
+<p class="eyebrow">TODAY'S SCORE</p>
+<strong id="health-score">0%</strong>
+<p class="muted" id="health-score-message">Complete your daily actions to build momentum.</p>
+</div>
+<div class="health-ring" id="health-ring"><span id="health-ring-label">0/13</span></div>
+</div>
+<div class="kpi-grid">
+<article class="card kpi">
+<span>Current weight</span>
+<strong id="health-current-weight">—</strong>
+<small id="health-weight-change">No weigh-in yet</small>
+</article>
+<article class="card kpi">
+<span>Phase 1 goal</span>
+<strong id="health-phase-goal">Under 200 lb</strong>
+<small id="health-lbs-to-go">Enter current weight</small>
+</article>
+<article class="card kpi">
+<span>Protein target</span>
+<strong>160 g</strong>
+<small>Daily target</small>
+</article>
+<article class="card kpi">
+<span>Daily limits</span>
+<strong>25 / 25</strong>
+<small>Carbs g / Sugar g</small>
+</article>
+</div>
+<div class="two-column health-layout">
+<article class="card">
+<div class="card-header">
+<div>
+<p class="eyebrow">TODAY'S EXECUTION</p>
+<h3 id="health-day-mode">Standard eating day</h3>
+</div>
+<span class="date-pill" id="health-date-badge"></span>
+</div>
+<div class="health-checklist" id="health-checklist"></div>
+</article>
+<article class="card">
+<div class="card-header">
+<div>
+<p class="eyebrow">DAILY SCHEDULE</p>
+<h3>Current and next action</h3>
+</div>
+</div>
+<div class="now-card" id="health-now-card"></div>
+<div class="health-schedule" id="health-schedule"></div>
+</article>
+</div>
+<div class="two-column health-layout">
+<article class="card">
+<div class="card-header">
+<div>
+<p class="eyebrow">WEIGHT TRACKER</p>
+<h3>Weekly progress</h3>
+</div>
+<button class="button" id="add-weigh-in">Add weigh-in</button>
+</div>
+<div class="weight-settings">
+<label>Starting weight<input id="health-start-weight" min="0" step="0.1" type="number"/></label>
+<label>Phase 1 goal<input id="health-goal-weight" min="0" step="0.1" type="number"/></label>
+<label>Ultimate goal<input id="health-ultimate-weight" min="0" step="0.1" type="number"/></label>
+<button class="button secondary" id="save-health-settings">Save goals</button>
+</div>
+<div class="weight-progress-wrap">
+<div class="progress-track"><div class="progress-fill" id="health-weight-progress"></div></div>
+<p class="muted" id="health-weight-progress-label">Add a weigh-in to begin.</p>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Date</th><th>Weight</th><th>Change</th><th></th></tr></thead>
+<tbody id="weight-log-body"></tbody>
+</table>
+</div>
+</article>
+<article class="card">
+<div class="card-header">
+<div>
+<p class="eyebrow">NUTRITION LOG</p>
+<h3>Track the numbers that matter</h3>
+</div>
+</div>
+<div class="nutrition-grid">
+<label>Protein (g)<input id="nutrition-protein" min="0" step="1" type="number"/></label>
+<label>Carbs (g)<input id="nutrition-carbs" min="0" step="1" type="number"/></label>
+<label>Sugar (g)<input id="nutrition-sugar" min="0" step="1" type="number"/></label>
+<label>Water (oz)<input id="nutrition-water" min="0" step="1" type="number"/></label>
+</div>
+<button class="button" id="save-nutrition">Save today's nutrition</button>
+<div class="nutrition-status" id="nutrition-status"></div>
+</article>
+</div>
+<article class="card food-log-card">
+<div class="card-header">
+<div>
+<p class="eyebrow">FOOD LOG</p>
+<h3>Add foods and calculate daily nutrients</h3>
+</div>
+<button class="button" id="add-food-item">Add food</button>
+</div>
+<div class="food-summary-grid">
+<div><span>Protein</span><strong id="food-total-protein">0 g</strong></div>
+<div><span>Carbs</span><strong id="food-total-carbs">0 g</strong></div>
+<div><span>Sugar</span><strong id="food-total-sugar">0 g</strong></div>
+<div><span>Fat</span><strong id="food-total-fat">0 g</strong></div>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Meal</th><th>Food</th><th>Serving</th><th>Protein</th>
+<th>Fat</th><th>Carbs</th><th>Sugar</th><th></th>
+</tr>
+</thead>
+<tbody id="food-log-body"></tbody>
+</table>
+</div>
+</article>
+<article class="card health-history-card">
+<div class="card-header">
+<div>
+<p class="eyebrow">PROGRESS HISTORY</p>
+<h3>Weekly averages and trend review</h3>
+</div>
+<button class="button secondary" id="export-health-csv">Export health CSV</button>
+</div>
+<div class="history-summary" id="health-history-summary"></div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Date</th><th>Daily Score</th><th>Protein</th><th>Carbs</th><th>Sugar</th><th>Fat</th><th>Weight</th></tr>
+</thead>
+<tbody id="health-history-body"></tbody>
+</table>
+</div>
+</article>
+
+<article class="card phase-card">
+<div class="card-header"><div><p class="eyebrow">RECIPE LIBRARY</p><h3>Save meals and log them in one click</h3></div><button class="button" id="add-recipe">Add recipe</button></div>
+<div class="account-detail-summary" id="meal-today-summary"></div>
+<div class="recipe-grid" id="recipe-grid"></div>
+<div class="card-header compact-header"><div><p class="eyebrow">TODAY</p><h3>Saved meals logged</h3></div></div>
+<div id="today-recipe-log"></div>
+</article></section>
+<section class="view" id="crypto-view">
+<div class="section-heading">
+<div>
+<p class="eyebrow">TRADING PERFORMANCE</p>
+<h3>Track active trading accounts and progress toward your goal</h3>
+</div>
+<button class="button" id="add-crypto-entry">Log today</button>
+</div>
+<article class="card account-manager-card">
+<div class="card-header">
+<div>
+<p class="eyebrow">ACCOUNT MANAGER</p>
+<h3>Crypto and prop firm accounts</h3>
+</div>
+<div class="inline-actions">
+<button class="button secondary" id="add-crypto-account">Add crypto account</button>
+<button class="button" id="add-prop-account">Add prop account</button>
+</div>
+</div>
+<div class="trading-account-grid" id="trading-account-grid"></div>
+</article>
+<div class="crypto-settings card">
+<label>
+            Plan start date
+            <input id="crypto-start-date" type="date"/>
+</label>
+<label>
+            Starting balance
+            <input id="crypto-start-balance" min="0" step="0.01" type="number"/>
+</label>
+<label>
+            Daily average goal
+            <input id="crypto-daily-rate" min="0" step="0.01" type="number"/>
+<small>Enter as percent, e.g. 0.5</small>
+</label>
+<button class="button" id="save-crypto-settings">Save plan</button>
+</div>
+<div class="kpi-grid">
+<article class="card kpi">
+<span>Today's target</span>
+<strong id="crypto-today-goal">$0</strong>
+<small id="crypto-day-number">Day 0</small>
+</article>
+<article class="card kpi">
+<span>Latest actual</span>
+<strong id="crypto-latest-actual">$0</strong>
+<small id="crypto-latest-date">No entries</small>
+</article>
+<article class="card kpi">
+<span>Variance to plan</span>
+<strong id="crypto-variance">$0</strong>
+<small id="crypto-variance-pct">0.00%</small>
+</article>
+<article class="card kpi">
+<span>Average daily growth</span>
+<strong id="crypto-average-growth">0.00%</strong>
+<small>Based on logged balances</small>
+</article>
+</div>
+<article class="card">
+<div class="card-header">
+<div>
+<p class="eyebrow">DAILY SCOREBOARD</p>
+<h3>Goal versus actual</h3>
+</div>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Plan day</th>
+<th>Goal balance</th>
+<th>Actual balance</th>
+<th>$ variance</th>
+<th>% variance</th>
+<th>Status</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="crypto-log-body"></tbody>
+</table>
+</div>
+</article>
+
+<article class="card phase-card">
+<div class="card-header"><div><p class="eyebrow">TRADING GOAL</p><h3>Required pace from active trading accounts</h3></div></div>
+<div class="crypto-settings compact-settings"><label>Goal amount<input id="million-goal-amount" min="1" step="1000" type="number"/></label><label>Target date<input id="million-target-date" type="date"/></label><button class="button" id="save-million-goal">Save goal</button></div>
+<div class="kpi-grid"><article class="card kpi"><span>Active capital</span><strong id="million-active-capital">$0</strong></article><article class="card kpi"><span>Daily dollar goal</span><strong id="million-daily-dollar">$0</strong></article><article class="card kpi"><span>Daily growth required</span><strong id="million-daily-percent">0%</strong></article></div>
+<div class="progress-track"><div class="progress-fill" id="million-progress"></div></div><p class="muted" id="million-message"></p>
+</article>
+<article class="card phase-card"><div class="card-header"><div><p class="eyebrow">TRADE JOURNAL</p><h3>Trade-by-trade history</h3></div><div class="inline-actions"><button class="button secondary" id="export-trades">Export CSV</button><button class="button" id="add-trade">Add trade</button></div></div><div class="account-detail-summary" id="trade-stats"></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Account</th><th>Symbol</th><th>Side</th><th>Net P/L</th><th>R</th><th>Setup</th><th></th></tr></thead><tbody id="trade-log-body"></tbody></table></div></article>
+<article class="card phase-card"><div class="card-header"><div><p class="eyebrow">WITHDRAWALS</p><h3>Savings and cash-on-hand tracking</h3></div><button class="button" id="add-withdrawal">Add withdrawal</button></div><div class="kpi-grid"><article class="card kpi"><span>Trading savings</span><strong id="withdrawal-savings">$0</strong></article><article class="card kpi"><span>Cash on hand</span><strong id="withdrawal-cash">$0</strong></article></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Account</th><th>Net</th><th>Destination</th><th>Note</th><th></th></tr></thead><tbody id="withdrawal-log-body"></tbody></table></div></article>
+</section>
+
+<section class="view" id="investments-view">
+<div class="section-heading"><div><p class="eyebrow">LONG-TERM INVESTMENTS</p><h3>Fidelity, Robinhood, Webull, and crypto holdings</h3></div><div class="inline-actions"><button class="button secondary" id="investment-import">Import crypto CSV</button><input accept=".csv,text/csv" hidden="" id="investment-import-file" type="file"/><button class="button secondary" id="add-investment-account">Add account</button><button class="button" id="add-investment-transaction">Add transaction</button></div></div>
+<div class="kpi-grid"><article class="card kpi"><span>Portfolio value</span><strong id="investment-total-value">$0</strong><small id="investment-price-status">No prices refreshed</small></article><article class="card kpi"><span>Total cost basis</span><strong id="investment-total-cost">$0</strong></article><article class="card kpi"><span>Unrealized P/L</span><strong id="investment-unrealized">$0</strong><small id="investment-unrealized-pct">0%</small></article><article class="card kpi"><span>Realized P/L</span><strong id="investment-realized">$0</strong></article></div>
+<article class="card"><div class="card-header"><div><p class="eyebrow">LIVE PRICES</p><h3>Automatic market-value refresh</h3></div><button class="button" id="refresh-investment-prices">Refresh prices</button></div><div class="crypto-settings investment-settings"><label>Twelve Data API key<input autocomplete="off" id="twelve-data-key" placeholder="Required for stocks and ETFs" type="password"/></label><label>Optional protected proxy URL<input id="investment-proxy-url" placeholder="https://your-worker.example.workers.dev" type="url"/></label><button class="button secondary" id="save-investment-settings">Save settings</button></div><p class="muted">Crypto uses CoinGecko IDs. A direct API key works for personal use but is visible to anyone who can inspect a public GitHub Pages site; use the included proxy example for better protection.</p></article>
+<article class="card"><div class="card-header"><div><p class="eyebrow">ACCOUNTS</p><h3>Portfolio by platform</h3></div></div><div class="trading-account-grid" id="investment-account-grid"></div></article>
+<article class="card"><div class="card-header"><div><p class="eyebrow">HOLDINGS</p><h3>Quantity, average cost, value, and P/L</h3></div><button class="button secondary" id="export-investments">Export CSV</button></div><div class="table-wrap"><table><thead><tr><th>Account</th><th>Asset</th><th>Type</th><th>Quantity</th><th>Avg cost</th><th>Price</th><th>Value</th><th>Unrealized P/L</th><th></th></tr></thead><tbody id="investment-holdings-body"></tbody></table></div></article>
+<article class="card"><div class="card-header"><div><p class="eyebrow">TRANSACTION HISTORY</p><h3>Dollar-cost averaging, sales, and dividends</h3></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Account</th><th>Asset</th><th>Type</th><th>Quantity</th><th>Price</th><th>Fees</th><th>Realized P/L</th><th></th></tr></thead><tbody id="investment-transactions-body"></tbody></table></div></article>
+</section></main>
+</div>
+<dialog id="gap-dialog">
+<form id="gap-form" method="dialog">
+<h3>Add gap spending</h3>
+<label>Date<input name="date" required="" type="date"/></label>
+<label>Vendor / description<input name="description" required=""/></label>
+<label>Amount<input min="0" name="amount" required="" step="0.01" type="number"/></label>
+<label>Category
+        <select name="category">
+<option>Housing</option><option>Health &amp; Food</option><option>Transportation</option>
+<option>Business</option><option>Debt Service</option><option>Investing</option>
+<option>Lifestyle</option><option>Emergency</option><option>Other</option>
+</select>
+</label>
+<label>Necessary?
+        <select name="necessary"><option>Yes</option><option>No</option><option>Review</option></select>
+</label>
+<div class="dialog-actions">
+<button class="button secondary" value="cancel">Cancel</button>
+<button class="button" value="default">Save</button>
+</div>
+</form>
+</dialog>
+<dialog id="crypto-dialog">
+<form id="crypto-form" method="dialog">
+<h3>Log crypto balance</h3>
+<label>Date<input name="date" required="" type="date"/></label>
+<label>Actual balance<input min="0" name="balance" required="" step="0.01" type="number"/></label>
+<div class="dialog-actions">
+<button class="button secondary" value="cancel">Cancel</button>
+<button class="button" value="default">Save</button>
+</div>
+</form>
+</dialog>
+<dialog id="account-transaction-dialog">
+<form id="account-transaction-form" method="dialog">
+<h3 id="account-transaction-title">Add profit or loss</h3>
+<input name="accountId" type="hidden"/>
+<label>Date<input name="date" required="" type="date"/></label>
+<label>Transaction type
+        <select name="type">
+<option value="profit">Profit</option>
+<option value="loss">Loss</option>
+<option value="deposit">Deposit / Added Capital</option>
+<option value="withdrawal">Withdrawal / Payout</option>
+</select>
+</label>
+<label>Amount<input min="0" name="amount" required="" step="0.01" type="number"/></label>
+<label>Note<input name="note" placeholder="Trade result, payout, reset, etc."/></label>
+<div class="dialog-actions">
+<button class="button secondary" value="cancel">Cancel</button>
+<button class="button" value="default">Save transaction</button>
+</div>
+</form>
+</dialog>
+<dialog id="account-detail-dialog">
+<div class="account-detail-panel">
+<div class="card-header">
+<div>
+<p class="eyebrow" id="account-detail-type">ACCOUNT</p>
+<h3 id="account-detail-name">Account details</h3>
+</div>
+<button class="button secondary" id="close-account-detail">Close</button>
+</div>
+<div class="account-detail-summary" id="account-detail-summary"></div>
+<div class="card-header">
+<div>
+<p class="eyebrow">TRANSACTION HISTORY</p>
+<h3>Profit, loss, deposits, and withdrawals</h3>
+</div>
+<button class="button" id="detail-add-transaction">Add profit / loss</button>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th><th>Balance After</th><th></th></tr></thead>
+<tbody id="account-transaction-body"></tbody>
+</table>
+</div>
+</div>
+</dialog>
+<dialog id="crypto-account-dialog">
+<form id="crypto-account-form" method="dialog">
+<h3>Add crypto account</h3>
+<label>Account name<input name="name" placeholder="Example: BloFin" required=""/></label>
+<label>Starting balance<input min="0" name="startingBalance" required="" step="0.01" type="number"/></label>
+<label>Current balance<input min="0" name="currentBalance" required="" step="0.01" type="number"/></label>
+<label>Daily growth goal (%)<input min="0" name="dailyGoal" step="0.01" type="number" value="0.5"/></label>
+<div class="dialog-actions">
+<button class="button secondary" value="cancel">Cancel</button>
+<button class="button" value="default">Save account</button>
+</div>
+</form>
+</dialog>
+<dialog id="prop-account-dialog">
+<form id="prop-account-form" method="dialog">
+<h3>Add prop firm account</h3>
+<label>Account name<input name="name" placeholder="Example: AquaFunded 200K" required=""/></label>
+<label>Account size<input min="0" name="accountSize" required="" step="0.01" type="number"/></label>
+<label>Program type
+        <select name="programType">
+<option value="instant">Instant funded</option>
+<option value="step">Step challenge</option>
+</select>
+</label>
+<label>Daily loss maximum (%)<input min="0" name="dailyLossMax" required="" step="0.01" type="number"/></label>
+<label>Maximum drawdown (%)<input min="0" name="maxDrawdown" required="" step="0.01" type="number"/></label>
+<label>Profit required to activate (%)<input min="0" name="profitTarget" required="" step="0.01" type="number"/></label>
+<label>Current profit (%)<input name="currentProfit" step="0.01" type="number" value="0"/></label>
+<div class="dialog-actions">
+<button class="button secondary" value="cancel">Cancel</button>
+<button class="button" value="default">Save account</button>
+</div>
+</form>
+</dialog>
+<dialog id="cash-account-dialog">
+<form id="cash-account-form" method="dialog">
+<h3 id="cash-account-dialog-title">Add cash account</h3>
+<input name="accountId" type="hidden"/>
+<label>Account name<input name="name" placeholder="Chase Checking" required/></label>
+<label>Account type<select name="type"><option value="checking">Checking</option><option value="savings">Savings</option></select></label>
+<label>Current balance<input min="0" name="balance" required step="0.01" type="number"/></label>
+<div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save account</button></div>
+</form>
+</dialog>
+<dialog id="finance-item-dialog">
+<form id="finance-item-form" method="dialog">
+<h3 id="finance-item-dialog-title">Add finance line item</h3>
+<input name="itemId" type="hidden"/>
+<label>Section
+        <select id="finance-item-section" name="section"></select>
+</label>
+<label>Line item name<input name="label" required=""/></label>
+<label>Budget amount<input min="0" name="budget" step="0.01" type="number" value="0"/></label>
+<label>Actual amount<input min="0" name="actual" step="0.01" type="number" value="0"/></label>
+<label>Manual variance adjustment<input name="varianceAdjustment" step="0.01" type="number" value="0"/></label>
+<small class="muted">Use the adjustment only when you need to override or explain the calculated variance.</small>
+<div class="dialog-actions">
+<button class="button secondary" value="cancel">Cancel</button>
+<button class="button" value="default">Save line item</button>
+</div>
+</form>
+</dialog>
+<dialog id="food-dialog">
+<form id="food-form" method="dialog">
+<h3>Add food item</h3>
+<label>Date<input name="date" required="" type="date"/></label>
+<label>Meal
+        <select name="meal">
+<option>Morning Shake</option>
+<option>Second Shake</option>
+<option>Protein Snack</option>
+<option>Main Meal</option>
+<option>Other</option>
+</select>
+</label>
+<label>Food name<input name="name" required=""/></label>
+<label>Serving / amount<input name="serving" placeholder="Example: 1 bottle, 6 oz, 1 cup"/></label>
+<div class="food-form-grid">
+<label>Protein (g)<input min="0" name="protein" step="0.1" type="number"/></label>
+<label>Carbs (g)<input min="0" name="carbs" step="0.1" type="number"/></label>
+<label>Sugar (g)<input min="0" name="sugar" step="0.1" type="number"/></label>
+<label>Fat (g)<input min="0" name="fat" step="0.1" type="number"/></label>
+</div>
+<div class="dialog-actions">
+<button class="button secondary" value="cancel">Cancel</button>
+<button class="button" value="default">Save food</button>
+</div>
+</form>
+</dialog>
+<dialog id="weigh-dialog">
+<form id="weigh-form" method="dialog">
+<h3>Add weigh-in</h3>
+<label>Date<input name="date" required="" type="date"/></label>
+<label>Weight (lb)<input min="0" name="weight" required="" step="0.1" type="number"/></label>
+<div class="dialog-actions">
+<button class="button secondary" value="cancel">Cancel</button>
+<button class="button" value="default">Save</button>
+</div>
+</form>
+</dialog>
+<script src="app.js"></script>
+
+<dialog id="recipe-dialog"><form id="recipe-form" method="dialog"><h3>Add recipe</h3><label>Name<input name="name" required=""/></label><label>Serving<input name="serving" placeholder="1 bowl"/></label><label>Protein (g)<input min="0" name="protein" step="0.1" type="number"/></label><label>Fat (g)<input min="0" name="fat" step="0.1" type="number"/></label><label>Carbs (g)<input min="0" name="carbs" step="0.1" type="number"/></label><label>Sugar (g)<input min="0" name="sugar" step="0.1" type="number"/></label><label>Ingredients<textarea name="ingredients"></textarea></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
+<dialog id="trade-dialog"><form id="trade-form" method="dialog"><h3>Add trade</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="trade-account-select" name="accountId" required=""></select></label><label>Symbol<input name="symbol" required=""/></label><label>Side<select name="side"><option>Long</option><option>Short</option></select></label><label>Entry<input name="entry" step="any" type="number"/></label><label>Exit<input name="exit" step="any" type="number"/></label><label>Risk amount<input min="0" name="risk" step="0.01" type="number"/></label><label>Net P/L<input name="netPnl" required="" step="0.01" type="number"/></label><label>Setup<input name="setup"/></label><label>Grade<select name="grade"><option>A+</option><option>A</option><option>B</option><option>C</option></select></label><label>Notes<textarea name="notes"></textarea></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
+<dialog id="withdrawal-dialog"><form id="withdrawal-form" method="dialog"><h3>Add withdrawal</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="withdrawal-account-select" name="accountId" required=""></select></label><label>Gross amount<input min="0" name="gross" required="" step="0.01" type="number"/></label><label>Fees<input min="0" name="fees" step="0.01" type="number" value="0"/></label><label>Destination<select name="destination"><option>Savings</option><option>Cash on Hand</option><option>Checking</option><option>Reinvested</option><option>Taxes</option><option>Account Purchase</option><option>Other</option></select></label><label>Note<input name="note"/></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save</button></div></form></dialog>
+
+<dialog id="investment-account-dialog"><form id="investment-account-form" method="dialog"><h3>Add investment account</h3><label>Account name<input name="name" placeholder="Fidelity" required=""/></label><label>Platform<select name="platform"><option>Fidelity</option><option>Robinhood</option><option>Webull</option><option>Coinbase</option><option>Kraken</option><option>Crypto Wallet</option><option>Other</option></select></label><label>Account type<select name="accountType"><option>Brokerage</option><option>Retirement</option><option>Crypto</option><option>Wallet</option></select></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save account</button></div></form></dialog>
+<dialog id="investment-transaction-dialog"><form id="investment-transaction-form" method="dialog"><h3>Add investment transaction</h3><label>Date<input name="date" required="" type="date"/></label><label>Account<select id="investment-account-select" name="accountId" required=""></select></label><label>Transaction<select name="type"><option value="buy">Buy / DCA</option><option value="sell">Sell</option><option value="dividend">Dividend</option></select></label><label>Asset type<select name="assetType"><option value="stock">Stock</option><option value="fund">ETF / Fund</option><option value="crypto">Crypto</option></select></label><label>Ticker / token symbol<input name="symbol" placeholder="AAPL or BTC" required=""/></label><label>Asset name<input name="name" placeholder="Apple or Bitcoin"/></label><label>CoinGecko ID (crypto only)<input name="priceId" placeholder="bitcoin"/></label><label>Quantity<input min="0" name="quantity" step="any" type="number"/></label><label>Price per share/token<input min="0" name="price" step="any" type="number"/></label><label>Fees<input min="0" name="fees" step="0.01" type="number" value="0"/></label><label>Note<input name="note"/></label><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Save transaction</button></div></form></dialog>
+</body>
+</html>
